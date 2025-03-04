@@ -1,0 +1,175 @@
+# Todo Application: How It Works
+
+This document explains the architecture and data flow of the Todo application to help you understand how the backend and frontend work together.
+
+## Architecture Overview
+
+The Todo application follows a client-server architecture with:
+
+1. **Backend**: Node.js + Express.js + TypeScript REST API
+2. **Frontend**: React + Redux Toolkit + TypeScript UI
+
+## Data Flow
+
+### Creating a Todo
+
+1. User fills out the todo form in the UI
+2. Form data is validated in `TodoForm.tsx`
+3. `handleSubmit` in `TodoList.tsx` dispatches the `addTodo` action
+4. `addTodo` thunk in `todosSlice.ts` calls `todoService.createTodo()`
+5. `todoService.ts` sends a POST request to the backend API
+6. Backend `todoController.ts` processes the request and creates a new todo
+7. The response is returned to the frontend
+8. Redux updates the state with the new todo
+9. React re-renders the UI with the updated todo list
+
+### Viewing Todos
+
+1. When `TodoList.tsx` mounts, it dispatches `fetchTodos` and `fetchCategories`
+2. `fetchTodos` thunk in `todosSlice.ts` calls `todoService.getAllTodos()`
+3. `todoService.ts` sends a GET request to the backend API
+4. Backend `todoController.ts` retrieves the todos and applies any filters
+5. The response is returned to the frontend
+6. Redux updates the state with the todos
+7. React renders the todos in the UI, organized by time (Today/Previous/Upcoming)
+
+### Filtering and Sorting
+
+1. User interacts with the filter and sort controls in `TodoFilter.tsx`
+2. Selecting a filter dispatches actions like `setFilter`, `setSort`, or `setCategoryFilter`
+3. These actions update the Redux state with the selected filters
+4. A `useEffect` hook in `TodoList.tsx` watches for filter changes and dispatches `fetchTodos` with the updated filters
+5. The backend applies the filters and returns the filtered results
+6. Redux updates the state and React re-renders the filtered list
+
+## Backend Architecture
+
+### Models
+
+- **Todo.ts**: Defines the Todo data structure and in-memory storage
+- **Category.ts**: Defines the Category data structure and in-memory storage
+
+### Controllers
+
+- **todoController.ts**: Contains handlers for todo CRUD operations
+- **categoryController.ts**: Contains handlers for category CRUD operations
+
+### Routes
+
+- **todoRoutes.ts**: Defines API endpoints for todo operations
+- **categoryRoutes.ts**: Defines API endpoints for category operations
+
+### Middleware
+
+- **errorMiddleware.ts**: Global error handling and CORS configuration
+
+## Frontend Architecture
+
+### Redux State Management
+
+The app uses Redux Toolkit for state management with two main slices:
+
+1. **todosSlice.ts**:
+   - Manages the state of todos
+   - Provides actions for CRUD operations
+   - Handles filtering and sorting logic
+
+2. **categoriesSlice.ts**:
+   - Manages the state of categories
+   - Provides actions for CRUD operations
+
+### React Components
+
+The UI is organized into reusable components:
+
+1. **App.tsx**: Main layout and tab navigation
+2. **TodoList.tsx**: Container component for todos with filtering
+3. **TodoItem.tsx**: Presentational component for individual todos
+4. **TodoForm.tsx**: Form for creating and editing todos
+5. **TodoFilter.tsx**: UI for filtering and sorting todos
+6. **CategoryList.tsx**: Container component for categories
+7. **CategoryForm.tsx**: Form for creating and editing categories
+8. **Modal.tsx**: Reusable modal component for forms and confirmations
+
+### Services
+
+- **todoService.ts**: Handles API communication for todo operations
+- **categoryService.ts**: Handles API communication for category operations
+
+## Key Concepts
+
+### In-Memory Database
+
+The backend uses in-memory arrays for storage:
+
+```typescript
+// In Todo.ts
+export const todos: Todo[] = [];
+
+// In Category.ts
+export const categories: Category[] = [];
+```
+
+In a production application, you would replace this with a real database.
+
+### API Communication
+
+The frontend services use the Fetch API to communicate with the backend:
+
+```typescript
+const response = await fetch(`${API_URL}/todos`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(todoData),
+});
+```
+
+### Redux Thunks
+
+The application uses Redux Toolkit's `createAsyncThunk` for handling asynchronous operations:
+
+```typescript
+export const fetchTodos = createAsyncThunk(
+  'todos/fetchTodos',
+  async (filters = {}, { rejectWithValue }) => {
+    try {
+      return await todoService.getAllTodos(filters);
+    } catch (error) {
+      return rejectWithValue((error as Error).message);
+    }
+  }
+);
+```
+
+### Custom Filtering
+
+The frontend implements custom filtering for Today/Previous/Upcoming views:
+
+```typescript
+const filterTodosByTab = (todos: ITodo[]) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  return todos.filter(todo => {
+    const dueDate = new Date(todo.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    if (activeTab === 'today') {
+      return dueDate.getTime() === today.getTime();
+    } else if (activeTab === 'previous') {
+      return dueDate.getTime() < today.getTime();
+    } else { // upcoming
+      return dueDate.getTime() > today.getTime();
+    }
+  });
+};
+```
+
+## Tips for Understanding the Code
+
+1. **Start with the main components**: Look at `App.tsx`, `TodoList.tsx`, and `CategoryList.tsx` to understand the main UI structure
+2. **Follow the data flow**: Trace how data moves from the UI through Redux to the API and back
+3. **Understand Redux state**: Examine the Redux slices to understand how state is organized
+4. **Explore API endpoints**: Review the API routes to understand what data operations are available
