@@ -1,11 +1,11 @@
-// src/components/todos/TodoList.tsx - Updated filtering logic
+// src/components/todos/TodoList.tsx
 import React, { useEffect, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '../../hooks';
 import { fetchTodos, addTodo, updateTodo, deleteTodo } from '../../features/todos/todosSlice';
 import { fetchCategories } from '../../features/categories/categoriesSlice';
 import TodoItem from './TodoItem';
-import TodoForm from './TodoForm';
 import TodoFilter from './TodoFilter';
+import TodoForm from './TodoForm';
 import Modal from '../common/Modal';
 import { ITodo } from '../../types';
 
@@ -19,7 +19,7 @@ const TodoList: React.FC = () => {
   const [editingTodo, setEditingTodo] = useState<ITodo | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [todoToDelete, setTodoToDelete] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'previous' | 'upcoming'>('today');
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -80,51 +80,51 @@ const TodoList: React.FC = () => {
     }
   };
 
-  // Improved filtering logic for todos
+  // Filter todos based on tab selection
   const filterTodosByTab = (todos: ITodo[]) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    if (activeTab === 'today') {
-      // Today tab shows:
-      // 1. Todos due today
-      // 2. Overdue todos (due before today)
-      return todos.filter(todo => {
-        const dueDate = new Date(todo.dueDate);
-        dueDate.setHours(0, 0, 0, 0);
-        return dueDate.getTime() <= today.getTime();
-      });
-    } else {
-      // Upcoming tab shows future todos
-      return todos.filter(todo => {
-        const dueDate = new Date(todo.dueDate);
-        dueDate.setHours(0, 0, 0, 0);
+    return todos.filter(todo => {
+      const dueDate = new Date(todo.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      
+      if (activeTab === 'today') {
+        return dueDate.getTime() === today.getTime();
+      } else if (activeTab === 'previous') {
+        return dueDate.getTime() < today.getTime();
+      } else { // upcoming
         return dueDate.getTime() > today.getTime();
-      });
-    }
+      }
+    });
+  };
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category ? category.name : 'Uncategorized';
   };
 
   const filteredTodos = filterTodosByTab(todos);
-  const totalHours = filteredTodos.length * 2; // Assuming 2 hours per todo
+  const totalHours = filteredTodos.reduce((total, todo) => total + 2, 0); // Assuming 2 hours per todo
 
-  // Function to check if a todo is due today
-  const isDueToday = (dueDate: string | Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todoDate = new Date(dueDate);
-    todoDate.setHours(0, 0, 0, 0);
-    
-    return todoDate.getTime() === today.getTime();
-  };
+  // Organize todos by category for group display
+  const todosByCategory = filteredTodos.reduce((acc: Record<string, ITodo[]>, todo) => {
+    const categoryId = todo.categoryId;
+    if (!acc[categoryId]) {
+      acc[categoryId] = [];
+    }
+    acc[categoryId].push(todo);
+    return acc;
+  }, {});
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Todo List</h1>
         <button 
           onClick={() => setNewTodoModalOpen(true)}
           className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 flex items-center"
+          aria-label="Add new todo"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -133,79 +133,104 @@ const TodoList: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-        <div className="flex border-b">
-          <button 
-            className={`flex-1 py-4 text-center font-medium ${activeTab === 'today' ? 'text-gray-800 border-b-2 border-blue-500' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('today')}
-          >
-            Today
-          </button>
-          <button 
-            className={`flex-1 py-4 text-center font-medium ${activeTab === 'upcoming' ? 'text-gray-800 border-b-2 border-blue-500' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('upcoming')}
-          >
-            Upcoming
-          </button>
-        </div>
-        
-        <div className="p-4">
-          <div className="mb-4 text-gray-500">
-            {totalHours}:00h
+      <div className="flex mb-6 md:flex-row flex-col md:space-x-4">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-4 md:mb-0 md:flex-1">
+          <div className="flex border-b">
+            <button 
+              className={`flex-1 py-4 text-center font-medium ${activeTab === 'previous' ? 'text-gray-800' : 'text-gray-500'}`}
+              onClick={() => setActiveTab('previous')}
+            >
+              Previous
+            </button>
+            <button 
+              className={`flex-1 py-4 text-center font-medium ${activeTab === 'today' ? 'text-gray-800 border-b-2 border-blue-500' : 'text-gray-500'}`}
+              onClick={() => setActiveTab('today')}
+            >
+              Today
+            </button>
+            <button 
+              className={`flex-1 py-4 text-center font-medium ${activeTab === 'upcoming' ? 'text-gray-800' : 'text-gray-500'}`}
+              onClick={() => setActiveTab('upcoming')}
+            >
+              Upcoming
+            </button>
           </div>
+          
+          <div className="p-4">
+            <div className="mb-4 text-gray-500">
+              {totalHours}:00h
+            </div>
 
-          {status === 'loading' ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : filteredTodos.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No {activeTab === 'today' ? 'current' : 'upcoming'} todos. Create a new one!</p>
-            </div>
-          ) : (
-            <div>
-              {filteredTodos.map(todo => (
-                <div key={todo.id} className={`bg-gray-100 rounded-lg p-4 mb-3 ${todo.completed ? 'opacity-70' : ''}`}>
-                  <div className="flex items-start">
-                    <input
-                      type="checkbox"
-                      checked={todo.completed}
-                      onChange={() => handleToggleComplete(todo.id)}
-                      className="mt-1 h-5 w-5 text-blue-600 rounded"
-                    />
-                    <div className="ml-3 flex-grow">
-                      <h3 className={`font-medium ${todo.completed ? 'line-through text-gray-500' : ''}`}>
-                        {todo.title}
-                      </h3>
-                      <p className="text-sm text-gray-600">{todo.description}</p>
-                      <div className="flex items-center mt-1">
-                        <span className="text-sm text-gray-500">2:00h</span>
-                        {isDueToday(todo.dueDate) && 
-                          <span className="ml-2 text-xs text-red-500">| Due today</span>
-                        }
+            {status === 'loading' ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : filteredTodos.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No {activeTab} todos found. Create a new one!</p>
+              </div>
+            ) : (
+              <div>
+                {filteredTodos.map(todo => (
+                  <div key={todo.id} className={`rounded-xl p-4 mb-3 ${todo.completed ? 'bg-gray-100' : 'bg-blue-50'} hover:shadow-md transition-all`}>
+                    <div className="flex items-start">
+                      <input 
+                        type="checkbox" 
+                        checked={todo.completed} 
+                        onChange={() => handleToggleComplete(todo.id)}
+                        className="mt-1 h-5 w-5 rounded-full border-2 border-gray-300 mr-3"
+                      />
+                      <div className="flex-grow">
+                        <h3 className={`text-lg font-medium ${todo.completed ? 'line-through text-gray-500' : ''}`}>
+                          {todo.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm mt-1">{todo.description}</p>
+                        
+                        <div className="mt-2 flex items-center text-sm">
+                          <span className="text-gray-500">
+                            2:00h
+                            {new Date(todo.dueDate).toDateString() === new Date().toDateString() && 
+                              <span className="ml-2 text-red-500">| Due today</span>
+                            }
+                          </span>
+                          <span className="ml-4 px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
+                            {getCategoryName(todo.categoryId)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => handleEdit(todo)}
+                          className="text-blue-500 hover:text-blue-700"
+                          aria-label="Edit todo"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 0L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(todo.id)}
+                          className="text-red-500 hover:text-red-700"
+                          aria-label="Delete todo"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
-                      <button onClick={() => handleEdit(todo)} className="text-blue-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => handleDelete(todo.id)} className="text-red-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="md:w-1/3">
+          <TodoFilter />
         </div>
       </div>
-
-      <TodoFilter />
 
       {/* New Todo Modal */}
       <Modal

@@ -9,7 +9,7 @@ const TodoFilter: React.FC = () => {
   const { categories } = useAppSelector((state) => state.categories);
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+    <div className="bg-white rounded-xl shadow-md p-4">
       <h2 className="text-lg font-semibold mb-4">Filters</h2>
       
       <div className="space-y-4">
@@ -23,7 +23,7 @@ const TodoFilter: React.FC = () => {
               id="statusFilter"
               value={activeFilter}
               onChange={(e) => dispatch(setFilter(e.target.value))}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
             >
               <option value="all">All</option>
               <option value="active">Active</option>
@@ -47,7 +47,7 @@ const TodoFilter: React.FC = () => {
               id="sortFilter"
               value={activeSort}
               onChange={(e) => dispatch(setSort(e.target.value))}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
             >
               <option value="dueDate">Due Date</option>
               <option value="createdAt">Creation Date</option>
@@ -70,7 +70,7 @@ const TodoFilter: React.FC = () => {
               id="categoryFilter"
               value={activeCategoryId || ''}
               onChange={(e) => dispatch(setCategoryFilter(e.target.value || null))}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
             >
               <option value="">All Categories</option>
               {categories.map((category) => (
