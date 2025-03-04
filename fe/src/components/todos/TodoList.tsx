@@ -1,4 +1,4 @@
-// src/components/todos/TodoList.tsx
+// src/components/todos/TodoList.tsx - Updated filtering logic
 import React, { useEffect, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '../../hooks';
 import { fetchTodos, addTodo, updateTodo, deleteTodo } from '../../features/todos/todosSlice';
@@ -19,7 +19,7 @@ const TodoList: React.FC = () => {
   const [editingTodo, setEditingTodo] = useState<ITodo | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [todoToDelete, setTodoToDelete] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'today' | 'yesterday'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -80,31 +80,43 @@ const TodoList: React.FC = () => {
     }
   };
 
-  // Filter todos based on tab selection (today/yesterday)
-  const filterTodosByDate = (todos: ITodo[]) => {
+  // Improved filtering logic for todos
+  const filterTodosByTab = (todos: ITodo[]) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
     if (activeTab === 'today') {
+      // Today tab shows:
+      // 1. Todos due today
+      // 2. Overdue todos (due before today)
       return todos.filter(todo => {
         const dueDate = new Date(todo.dueDate);
         dueDate.setHours(0, 0, 0, 0);
-        return dueDate.getTime() === today.getTime();
+        return dueDate.getTime() <= today.getTime();
       });
     } else {
+      // Upcoming tab shows future todos
       return todos.filter(todo => {
         const dueDate = new Date(todo.dueDate);
         dueDate.setHours(0, 0, 0, 0);
-        return dueDate.getTime() === yesterday.getTime();
+        return dueDate.getTime() > today.getTime();
       });
     }
   };
 
-  const filteredTodos = filterTodosByDate(todos);
-  const totalHours = filteredTodos.reduce((total, todo) => total + 2, 0); // Assuming 2 hours per todo for demo
+  const filteredTodos = filterTodosByTab(todos);
+  const totalHours = filteredTodos.length * 2; // Assuming 2 hours per todo
+
+  // Function to check if a todo is due today
+  const isDueToday = (dueDate: string | Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todoDate = new Date(dueDate);
+    todoDate.setHours(0, 0, 0, 0);
+    
+    return todoDate.getTime() === today.getTime();
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -124,16 +136,16 @@ const TodoList: React.FC = () => {
       <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
         <div className="flex border-b">
           <button 
-            className={`flex-1 py-4 text-center font-medium ${activeTab === 'yesterday' ? 'text-gray-800' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('yesterday')}
-          >
-            Yesterday
-          </button>
-          <button 
             className={`flex-1 py-4 text-center font-medium ${activeTab === 'today' ? 'text-gray-800 border-b-2 border-blue-500' : 'text-gray-500'}`}
             onClick={() => setActiveTab('today')}
           >
             Today
+          </button>
+          <button 
+            className={`flex-1 py-4 text-center font-medium ${activeTab === 'upcoming' ? 'text-gray-800 border-b-2 border-blue-500' : 'text-gray-500'}`}
+            onClick={() => setActiveTab('upcoming')}
+          >
+            Upcoming
           </button>
         </div>
         
@@ -148,18 +160,45 @@ const TodoList: React.FC = () => {
             </div>
           ) : filteredTodos.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No todos for {activeTab}. Create a new one!</p>
+              <p className="text-gray-500">No {activeTab === 'today' ? 'current' : 'upcoming'} todos. Create a new one!</p>
             </div>
           ) : (
             <div>
               {filteredTodos.map(todo => (
-                <TodoItem 
-                  key={todo.id} 
-                  todo={todo} 
-                  onToggleComplete={handleToggleComplete}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+                <div key={todo.id} className={`bg-gray-100 rounded-lg p-4 mb-3 ${todo.completed ? 'opacity-70' : ''}`}>
+                  <div className="flex items-start">
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => handleToggleComplete(todo.id)}
+                      className="mt-1 h-5 w-5 text-blue-600 rounded"
+                    />
+                    <div className="ml-3 flex-grow">
+                      <h3 className={`font-medium ${todo.completed ? 'line-through text-gray-500' : ''}`}>
+                        {todo.title}
+                      </h3>
+                      <p className="text-sm text-gray-600">{todo.description}</p>
+                      <div className="flex items-center mt-1">
+                        <span className="text-sm text-gray-500">2:00h</span>
+                        {isDueToday(todo.dueDate) && 
+                          <span className="ml-2 text-xs text-red-500">| Due today</span>
+                        }
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button onClick={() => handleEdit(todo)} className="text-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+                      <button onClick={() => handleDelete(todo.id)} className="text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
