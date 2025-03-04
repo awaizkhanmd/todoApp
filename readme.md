@@ -51,7 +51,6 @@ Builds both the frontend and backend applications for production.
 
 ### `npm run start`
 
-Starts both the frontend and backend applications in production mode after building.
 
 
 ## API Endpoints
