@@ -1,112 +1,86 @@
-import React, { useState } from 'react';
-import { useAppDispatch, useAppSelector } from '../../hooks';
-import { updateTodo, deleteTodo } from '../../features/todos/todosSlice';
+// src/components/todos/TodoItem.tsx
+import React from 'react';
 import { ITodo } from '../../types';
-import Button from '../common/Button';
-import TodoForm from './TodoForm';
-import Modal from '../common/Modal';
 
 interface TodoItemProps {
   todo: ITodo;
+  onToggleComplete: (id: string) => void;
+  onEdit: (todo: ITodo) => void;
+  onDelete: (id: string) => void;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({ todo }) => {
-  const dispatch = useAppDispatch();
-  const categories = useAppSelector((state) => state.categories.categories);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-
-  const category = categories.find((cat) => cat.id === todo.categoryId);
-
-  const handleToggleComplete = () => {
-    dispatch(updateTodo({ id: todo.id, todoData: { completed: !todo.completed } }));
+const TodoItem: React.FC<TodoItemProps> = ({ 
+  todo, 
+  onToggleComplete, 
+  onEdit, 
+  onDelete 
+}) => {
+  // Format duration as hours (e.g., "2:30h")
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}:${mins.toString().padStart(2, '0')}h`;
   };
 
-  const handleDelete = () => {
-    dispatch(deleteTodo(todo.id));
-    setDeleteModalOpen(false);
-  };
-
-  // Format date
-  const formatDate = (dateString: string | Date) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
-
-  // Determine if the todo is overdue
-  const isOverdue = () => {
-    const dueDate = new Date(todo.dueDate);
+  // Determine if todo is due today
+  const isToday = (date: Date | string) => {
+    const todoDate = new Date(date);
     const today = new Date();
-    return !todo.completed && dueDate < today;
+    return todoDate.setHours(0, 0, 0, 0) === today.setHours(0, 0, 0, 0);
+  };
+
+  // Get appropriate background color based on status and due date
+  const getBgColor = () => {
+    if (todo.completed) return 'bg-gray-100';
+    if (new Date(todo.dueDate) < new Date()) return 'bg-red-200'; // Overdue
+    if (isToday(todo.dueDate)) return 'bg-yellow-200'; // Due today
+    return 'bg-blue-100'; // Normal
   };
 
   return (
-    <div className={`border rounded-lg p-4 mb-4 ${todo.completed ? 'bg-gray-50' : ''} ${isOverdue() ? 'border-red-300' : 'border-gray-200'}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            checked={todo.completed}
-            onChange={handleToggleComplete}
-            className="h-5 w-5 text-blue-600 focus:ring-blue-500 rounded"
-          />
-          <div className="ml-3">
+    <div className={`rounded-xl p-4 mb-3 ${getBgColor()} transition-all hover:shadow-md`}>
+      <div className="flex items-start">
+        <div className="flex-grow">
+          <div className="flex items-center">
+            <input 
+              type="checkbox" 
+              checked={todo.completed} 
+              onChange={() => onToggleComplete(todo.id)}
+              className="w-5 h-5 rounded-full border-2 border-gray-300 mr-3"
+            />
             <h3 className={`text-lg font-medium ${todo.completed ? 'line-through text-gray-500' : ''}`}>
               {todo.title}
             </h3>
-            <p className="text-sm text-gray-600">{todo.description}</p>
-            <div className="mt-1 flex items-center space-x-2">
-              <span className={`text-xs px-2 py-1 rounded-full ${isOverdue() ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-                Due: {formatDate(todo.dueDate)}
-              </span>
-              {category && (
-                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
-                  {category.name}
-                </span>
-              )}
-            </div>
+          </div>
+          <p className="text-gray-600 mt-1">{todo.description}</p>
+          
+          <div className="mt-2 flex items-center">
+            <span className="text-sm text-gray-500">
+              {formatDuration(120)} {/* Assuming 120 minutes (2 hours) - replace with actual todo duration */}
+              {isToday(todo.dueDate) && <span className="ml-2 text-red-500">| Due today</span>}
+            </span>
           </div>
         </div>
+        
         <div className="flex space-x-2">
-          <Button variant="secondary" onClick={() => setEditModalOpen(true)}>
-            Edit
-          </Button>
-          <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
-            Delete
-          </Button>
+          <button 
+            onClick={() => onEdit(todo)}
+            className="text-blue-500 hover:text-blue-700"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 0L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button 
+            onClick={() => onDelete(todo.id)}
+            className="text-red-500 hover:text-red-700"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </div>
       </div>
-
-      {/* Edit Modal */}
-      <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} title="Edit Todo">
-        <TodoForm
-          todo={todo}
-          onSubmit={(updatedTodo) => {
-            dispatch(updateTodo({ id: todo.id, todoData: updatedTodo }));
-            setEditModalOpen(false);
-          }}
-          onCancel={() => setEditModalOpen(false)}
-        />
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        title="Confirm Delete"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={handleDelete}>
-              Delete
-            </Button>
-          </>
-        }
-      >
-        <p>Are you sure you want to delete this todo item?</p>
-      </Modal>
     </div>
   );
 };
