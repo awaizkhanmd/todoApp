@@ -1,5 +1,5 @@
 // src/features/categories/categoriesSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { categoryService } from '../../services/categoryService';
 import { ICategory } from '../../types';
 
@@ -12,7 +12,7 @@ interface CategoriesState {
 const initialState: CategoriesState = {
   categories: [],
   status: 'idle',
-  error: null,
+  error: null
 };
 
 // Async thunks
@@ -61,7 +61,6 @@ export const deleteCategory = createAsyncThunk(
   }
 );
 
-// Create slice
 const categoriesSlice = createSlice({
   name: 'categories',
   initialState,

@@ -1,3 +1,4 @@
+// src/services/categoryService.ts
 import { ICategory } from '../types';
 
 const API_URL = 'http://localhost:5000/api';
@@ -27,20 +28,6 @@ export const categoryService = {
       return await response.json();
     } catch (error) {
       console.error(`Error fetching category ${id}:`, error);
-      throw error;
-    }
-  },
-
-  // Get todos by category ID
-  getTodosByCategory: async (categoryId: string) => {
-    try {
-      const response = await fetch(`${API_URL}/categories/${categoryId}/todos`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch todos by category');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error(`Error fetching todos for category ${categoryId}:`, error);
       throw error;
     }
   },
@@ -100,6 +87,20 @@ export const categoryService = {
       return await response.json();
     } catch (error) {
       console.error(`Error deleting category ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get todos by category ID
+  getTodosByCategory: async (categoryId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/categories/${categoryId}/todos`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch todos by category');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching todos for category ${categoryId}:`, error);
       throw error;
     }
   },
